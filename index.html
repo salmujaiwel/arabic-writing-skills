@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام تقييم مهارات الكتابة العربية</title>
+    <title>مهارات الكتابة</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap');
@@ -339,29 +339,29 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>نظام تقييم مهارات الكتابة العربية</h1>
-            <p>برنامج أسبوعي لتطوير مهارات الكتابة باللغة العربية</p>
+            <h1>تقييم مهارات الكتابة</h1>
+            <p>التطوير الأسبوعي لمهارات الكتابة</p>
         </div>
 
         <div class="form-container">
             <form id="writingForm">
                 <div class="form-group">
-                    <label for="student_name">اسم الطالب:</label>
+                    <label for="student_name">اسم الطالب</label>
                     <input type="text" id="student_name" name="student_name" required placeholder="أدخل اسمك الكامل">
                 </div>
 
                 <div class="form-group">
-                    <label for="student_id">رقم الطالب:</label>
+                    <label for="student_id">رقم الطالب</label>
                     <input type="text" id="student_id" name="student_id" required placeholder="أدخل رقمك الجامعي">
                 </div>
 
                 <div class="form-group">
-                    <label for="title">عنوان المقال:</label>
+                    <label for="title">عنوان المقال</label>
                     <input type="text" id="title" name="title" required placeholder="اكتب عنواناً جذاباً لمقالك">
                 </div>
 
                 <div class="form-group">
-                    <label for="weekly_topic">المهارة الأسبوعية:</label>
+                    <label for="weekly_topic">المهارة الأسبوعية</label>
                     <select id="weekly_topic" name="weekly_topic" required>
                         <option value="">اختر المهارة الأسبوعية</option>
                         <option value="كتابة الهمزة في أول الكلمة، ووسطها، وآخرها">كتابة الهمزة في أول الكلمة، ووسطها، وآخرها</option>
@@ -383,8 +383,7 @@
                         <textarea id="article" name="article" required placeholder="اكتب مقالك هنا...
 
 تأكد من:
-- كتابة عنوان جذاب
-- تقسيم المقال إلى ثلاث فقرات: مقدمة، عرض، خاتمة  
+- كتابة العنوان
 - التركيز على المهارة الأسبوعية المختارة
 - استخدام لغة عربية سليمة
 - كتابة ما لا يقل عن 100 كلمة"></textarea>
@@ -398,8 +397,8 @@
             </form>
 
             <div class="loading" id="loading">
-                <h3>جاري تقييم مقالك...</h3>
-                <p>يرجى الانتظار، قد تستغرق العملية دقيقة أو دقيقتين</p>
+                <h3>تحت التقييم</h3>
+                <p>يُرجى الانتظار</p>
             </div>
 
             <div class="result" id="result"></div>
