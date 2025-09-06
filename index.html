@@ -406,7 +406,6 @@
     </div>
 
     <script>
-        let selectedWeek = 0;
         let currentSubmissionData = null;
         let currentResultData = null;
         let docxLibraryLoaded = false;
@@ -453,18 +452,48 @@
             });
         }
 
+        // Create text file as fallback
+        function createTextFile() {
+            const content = `تقرير تقييم مهارات الكتابة
+
+الطالب: ${currentSubmissionData.student_name}
+رقم الطالب: ${currentSubmissionData.student_id}
+عنوان المقال: ${currentSubmissionData.title}
+المهارة الأسبوعية: ${currentSubmissionData.weekly_topic}
+
+المقال الأصلي:
+${currentSubmissionData.article}
+
+نتائج التقييم:
+التقييم العام: ${currentResultData.gemini_rating || 'غير متوفر'}/10
+عدد الكلمات: ${currentResultData.word_count || 0}
+عدد الفقرات: ${currentResultData.paragraph_count || 0}
+التنوع المعجمي: ${currentResultData.lexical_diversity || 0}%
+
+ملخص التقييم:
+${currentResultData.feedback_summary || 'غير متوفر'}
+
+التقييم التفصيلي:
+${currentResultData.gemini_feedback || 'غير متوفر'}`;
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            downloadFile(blob, 'تقرير_الكتابة.txt');
+        }
+
+        // Create enhanced DOCX report
         async function createEnhancedDocx() {
-            const { Document, Packer } = docx;
-            
             try {
+                await loadDocxLibrary();
+                const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+                
                 function createArabicParagraph(text, isBold = false, isHeader = false, isBullet = false) {
                     const cleanedText = text.replace(/[:.]/g, '').trim();
                     const spacing = isHeader ? { after: 120 } : (isBullet ? { after: 80 } : { after: 100 });
                     const indent = isBullet ? { left: 400 } : {};
                     
-                    return new docx.Paragraph({
+                    return new Paragraph({
                         children: [
-                            new docx.TextRun({
+                            new TextRun({
                                 text: cleanedText,
                                 bold: isBold || isHeader,
                                 font: { name: "Arial" },
@@ -472,7 +501,7 @@
                                 rightToLeft: true
                             })
                         ],
-                        alignment: docx.AlignmentType.BOTH,
+                        alignment: AlignmentType.BOTH,
                         spacing: spacing,
                         indent: indent,
                         bidirectional: true
@@ -483,7 +512,7 @@
                     return text.replace(/^\*+\s*/, '• ').trim();
                 }
 
-                const studentInfo = currentSubmissionData.student_id;
+                const studentInfo = `${currentSubmissionData.student_name} (${currentSubmissionData.student_id})`;
                 const topicInfo = currentSubmissionData.weekly_topic;
                 const essayTitle = currentSubmissionData.title;
                 const essayContent = currentSubmissionData.article;
@@ -495,23 +524,23 @@
 
                 const children = [
                     createArabicParagraph("المقال وتقرير التقييم", true, true),
-                    createArabicParagraph(`الطالب ${studentInfo.replace(/[:.]/g, '').trim()}`),
-                    createArabicParagraph(`الموضوع ${topicInfo.replace(/[:.]/g, '').trim()}`),
-                    new docx.Paragraph({
+                    createArabicParagraph(`الطالب: ${studentInfo}`),
+                    createArabicParagraph(`الموضوع: ${topicInfo}`),
+                    new Paragraph({
                         children: [],
                         spacing: { after: 400 }
                     }),
                     createArabicParagraph("المقال الأصلي", true, true),
                     createArabicParagraph(essayTitle, true),
                     createArabicParagraph(essayContent),
-                    new docx.Paragraph({
+                    new Paragraph({
                         children: [],
                         spacing: { after: 400 }
                     }),
                     createArabicParagraph("تقرير التقييم", true, true),
-                    createArabicParagraph(`التقييم العام ${currentResultData.gemini_rating}/10`),
-                    createArabicParagraph(`عدد الكلمات ${currentResultData.word_count} | عدد الفقرات ${currentResultData.paragraph_count}`),
-                    createArabicParagraph(`التنوع المعجمي ${parseFloat(currentResultData.lexical_diversity).toFixed(1)}% | الكثافة المعجمية ${parseFloat(currentResultData.lexical_density).toFixed(1)}%`),
+                    createArabicParagraph(`التقييم العام: ${currentResultData.gemini_rating || 'غير متوفر'}/10`),
+                    createArabicParagraph(`عدد الكلمات: ${currentResultData.word_count || 0} | عدد الفقرات: ${currentResultData.paragraph_count || 0}`),
+                    createArabicParagraph(`التنوع المعجمي: ${parseFloat(currentResultData.lexical_diversity || 0).toFixed(1)}% | الكثافة المعجمية: ${parseFloat(currentResultData.lexical_density || 0).toFixed(1)}%`),
                     createArabicParagraph("ملخص التقييم", true, true)
                 ];
 
@@ -564,7 +593,7 @@
                                     rightToLeft: true
                                 },
                                 paragraph: {
-                                    alignment: docx.AlignmentType.RIGHT,
+                                    alignment: AlignmentType.RIGHT,
                                     bidirectional: true
                                 }
                             }
@@ -573,16 +602,12 @@
                 });
 
                 const blob = await Packer.toBlob(doc);
-                downloadFile(blob, 'المقال_والتقرير.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                downloadFile(blob, 'المقال_والتقرير.docx');
             } catch (error) {
                 console.error('حدث خطأ أثناء إنشاء المستند:', error);
                 alert('حدث خطأ أثناء إنشاء المستند. سيتم إنشاء ملف نصي بدلاً من ذلك.');
                 createTextFile();
             }
-        }
-
-            const blob = await Packer.toBlob(doc);
-            downloadFile(blob, 'تقرير الكتابة.docx');
         }
 
         // Download file
@@ -629,7 +654,7 @@
                     </div>
                     <div class="metric-card">
                         <div class="metric-title">التنوع المعجمي</div>
-                        <div class="metric-value">${data.lexical_diversity || 0}%</div>
+                        <div class="metric-value">${parseFloat(data.lexical_diversity || 0).toFixed(1)}%</div>
                     </div>
                 </div>
 
@@ -644,7 +669,7 @@
                 </div>
 
                 <div style="text-align: center;">
-                    <button class="download-btn" onclick="createDocxReport()">
+                    <button class="download-btn" onclick="createEnhancedDocx()">
                         تحميل التقرير
                     </button>
                 </div>
@@ -653,6 +678,9 @@
             resultDiv.className = 'result success';
             resultDiv.style.display = 'block';
         }
+
+        // Make createEnhancedDocx globally accessible
+        window.createEnhancedDocx = createEnhancedDocx;
 
         // Event listeners
         document.getElementById('article').addEventListener('input', updateWordCounter);
