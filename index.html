@@ -440,6 +440,7 @@
             if (docxLibraryLoaded && typeof docx !== 'undefined') {
                 return Promise.resolve();
             }
+            
             return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
                 script.src = 'https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js';
@@ -452,64 +453,136 @@
             });
         }
 
-        // Create DOCX document
-        async function createDocxReport() {
-            await loadDocxLibrary();
-            const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+        async function createEnhancedDocx() {
+            const { Document, Packer } = docx;
+            
+            try {
+                function createArabicParagraph(text, isBold = false, isHeader = false, isBullet = false) {
+                    const cleanedText = text.replace(/[:.]/g, '').trim();
+                    const spacing = isHeader ? { after: 120 } : (isBullet ? { after: 80 } : { after: 100 });
+                    const indent = isBullet ? { left: 400 } : {};
+                    
+                    return new docx.Paragraph({
+                        children: [
+                            new docx.TextRun({
+                                text: cleanedText,
+                                bold: isBold || isHeader,
+                                font: { name: "Arial" },
+                                size: isHeader ? 24 : 22,
+                                rightToLeft: true
+                            })
+                        ],
+                        alignment: docx.AlignmentType.BOTH,
+                        spacing: spacing,
+                        indent: indent,
+                        bidirectional: true
+                    });
+                }
 
-            function createArabicParagraph(text, isBold = false, isHeader = false) {
-                return new Paragraph({
-                    children: [
-                        new TextRun({
-                            text: text,
-                            bold: isBold || isHeader,
-                            font: { name: "Arial" },
-                            size: isHeader ? 24 : 22,
-                            rightToLeft: true
-                        })
-                    ],
-                    alignment: AlignmentType.RIGHT,
-                    spacing: { after: isHeader ? 240 : 120 },
-                    bidirectional: true
-                });
-            }
+                function processBulletText(text) {
+                    return text.replace(/^\*+\s*/, '• ').trim();
+                }
 
-            const doc = new Document({
-                sections: [{
-                    properties: {
-                        page: {
-                            margin: { top: 720, right: 720, bottom: 720, left: 720 }
+                const studentInfo = currentSubmissionData.student_id;
+                const topicInfo = currentSubmissionData.weekly_topic;
+                const essayTitle = currentSubmissionData.title;
+                const essayContent = currentSubmissionData.article;
+                const feedbackText = currentResultData.gemini_feedback || 'غير متوفر';
+                const summaryText = currentResultData.feedback_summary || 'غير متوفر';
+                
+                const feedbackLines = feedbackText.split('\n').filter(line => line.trim());
+                const summaryLines = summaryText.split('\n').filter(line => line.trim());
+
+                const children = [
+                    createArabicParagraph("المقال وتقرير التقييم", true, true),
+                    createArabicParagraph(`الطالب ${studentInfo.replace(/[:.]/g, '').trim()}`),
+                    createArabicParagraph(`الموضوع ${topicInfo.replace(/[:.]/g, '').trim()}`),
+                    new docx.Paragraph({
+                        children: [],
+                        spacing: { after: 400 }
+                    }),
+                    createArabicParagraph("المقال الأصلي", true, true),
+                    createArabicParagraph(essayTitle, true),
+                    createArabicParagraph(essayContent),
+                    new docx.Paragraph({
+                        children: [],
+                        spacing: { after: 400 }
+                    }),
+                    createArabicParagraph("تقرير التقييم", true, true),
+                    createArabicParagraph(`التقييم العام ${currentResultData.gemini_rating}/10`),
+                    createArabicParagraph(`عدد الكلمات ${currentResultData.word_count} | عدد الفقرات ${currentResultData.paragraph_count}`),
+                    createArabicParagraph(`التنوع المعجمي ${parseFloat(currentResultData.lexical_diversity).toFixed(1)}% | الكثافة المعجمية ${parseFloat(currentResultData.lexical_density).toFixed(1)}%`),
+                    createArabicParagraph("ملخص التقييم", true, true)
+                ];
+
+                summaryLines.forEach(line => {
+                    if (line.trim()) {
+                        if (line.startsWith('*') || line.startsWith('-')) {
+                            children.push(createArabicParagraph(processBulletText(line), false, false, true));
+                        } else if (line.includes(':') || line.length < 50) {
+                            children.push(createArabicParagraph(line, true));
+                        } else {
+                            children.push(createArabicParagraph(line));
                         }
-                    },
-                    children: [
-                        createArabicParagraph("تقرير تقييم المقال", true, true),
-                        createArabicParagraph(`الطالب: ${currentSubmissionData.student_name || 'غير محدد'}`),
-                        createArabicParagraph(`رقم الطالب: ${currentSubmissionData.student_id}`),
-                        createArabicParagraph(`المهارة: ${currentSubmissionData.weekly_topic}`),
-                        createArabicParagraph(`التاريخ: ${new Date().toLocaleDateString('ar-SA')}`),
-                        createArabicParagraph(""),
-                        createArabicParagraph("المقال الأصلي", true, true),
-                        createArabicParagraph(currentSubmissionData.title, true),
-                        createArabicParagraph(currentSubmissionData.article),
-                        createArabicParagraph(""),
-                        createArabicParagraph("نتائج التقييم", true, true),
-                        createArabicParagraph(`التقييم العام: ${currentResultData.gemini_rating}/10`),
-                        createArabicParagraph(`عدد الكلمات: ${currentResultData.word_count}`),
-                        createArabicParagraph(`عدد الفقرات: ${currentResultData.paragraph_count}`),
-                        createArabicParagraph(`التنوع المعجمي: ${currentResultData.lexical_diversity}%`),
-                        createArabicParagraph(`الكثافة المعجمية: ${currentResultData.lexical_density}%`),
-                        createArabicParagraph(""),
-                        createArabicParagraph("ملخص التقييم", true, true),
-                        createArabicParagraph(currentResultData.feedback_summary || 'غير متوفر'),
-                        createArabicParagraph(""),
-                        createArabicParagraph("التقييم التفصيلي", true, true),
-                        createArabicParagraph(currentResultData.gemini_feedback || 'غير متوفر')
-                    ]
-                }]
-            });
+                    }
+                });
+
+                children.push(createArabicParagraph("التقييم التفصيلي", true, true));
+
+                feedbackLines.forEach(line => {
+                    if (line.trim()) {
+                        if (line.startsWith('*') || line.startsWith('-')) {
+                            children.push(createArabicParagraph(processBulletText(line), false, false, true));
+                        } else if (line.includes(':') || line.length < 50) {
+                            children.push(createArabicParagraph(line, true));
+                        } else {
+                            children.push(createArabicParagraph(line));
+                        }
+                    }
+                });
+
+                const doc = new Document({
+                    sections: [{
+                        properties: {
+                            page: {
+                                margin: {
+                                    top: 720,
+                                    right: 720,
+                                    bottom: 720,
+                                    left: 720
+                                }
+                            }
+                        },
+                        children: children
+                    }],
+                    styles: {
+                        default: {
+                            document: {
+                                run: {
+                                    font: "Arial",
+                                    size: 22,
+                                    rightToLeft: true
+                                },
+                                paragraph: {
+                                    alignment: docx.AlignmentType.RIGHT,
+                                    bidirectional: true
+                                }
+                            }
+                        }
+                    }
+                });
+
+                const blob = await Packer.toBlob(doc);
+                downloadFile(blob, 'المقال_والتقرير.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+            } catch (error) {
+                console.error('حدث خطأ أثناء إنشاء المستند:', error);
+                alert('حدث خطأ أثناء إنشاء المستند. سيتم إنشاء ملف نصي بدلاً من ذلك.');
+                createTextFile();
+            }
+        }
 
             const blob = await Packer.toBlob(doc);
-            downloadFile(blob, 'تقرير_المقال.docx');
+            downloadFile(blob, 'تقرير الكتابة.docx');
         }
 
         // Download file
